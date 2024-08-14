@@ -8,5 +8,7 @@ COPY . .
 
 RUN yarn
 
-ENTRYPOINT [ "/bin/sh" ]
+RUN yarn build
+
+ENTRYPOINT [ "yarn", "preview", "--", "--host" ]
 # CMD [ "/bin/sh" ]
