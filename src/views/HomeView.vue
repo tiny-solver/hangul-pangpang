@@ -1,5 +1,7 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';
+import { type Container } from "@tsparticles/engine";
+
 
 interface Word {
   word: string;
@@ -67,7 +69,7 @@ const startTimer = () => {
   }, 1000);
 };
 
-const particlesLoaded = async container => {
+const particlesLoaded = async (container: Container) => {
     console.log("Particles container loaded", container);
 };
 
