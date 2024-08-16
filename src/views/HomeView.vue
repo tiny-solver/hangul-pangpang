@@ -24,6 +24,7 @@ const currentWord = ref<Word>(wordPool[0]);
 const currentStage = ref(1);
 const userAnswer = ref('');
 const isAnswerCorrect = ref(false);
+const showParticles = ref(false);
 const timeLeft = ref(15);
 let timer: ReturnType<typeof setInterval>;
 
@@ -38,6 +39,8 @@ const nextWord = () => {
   currentStage.value = 1;
   timeLeft.value = 15;
   startTimer();
+
+  showParticles.value = false;
 };
 
 const checkAnswer = () => {
@@ -45,6 +48,8 @@ const checkAnswer = () => {
   || userAnswer.value.toLowerCase() === currentWord.value.word.toLowerCase()) {
     isAnswerCorrect.value = true;
     clearInterval(timer);
+
+    showParticles.value = true;
   }
 };
 
@@ -62,6 +67,10 @@ const startTimer = () => {
   }, 1000);
 };
 
+const particlesLoaded = async container => {
+    console.log("Particles container loaded", container);
+};
+
 onMounted(() => {
   startGame();
 });
@@ -70,6 +79,10 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen flex flex-col justify-center items-center bg-gray-100 p-4">
+
+    <!-- 파티클 효과 -->
+    <vue-particles v-if="showParticles" id="tsparticles" @particles-loaded="particlesLoaded" url="/particles.json" />
+
     <!-- 타이머 표시 -->
     <div class="w-full max-w-md">
       <div class="h-4 bg-gray-300 rounded-full overflow-hidden mb-4">
