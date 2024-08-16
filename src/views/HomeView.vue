@@ -80,11 +80,8 @@ onMounted(() => {
 
 
 <template>
-  <div class="min-h-screen flex flex-col justify-center items-center bg-gray-100 p-4">
 
-    <!-- 파티클 효과 -->
-    <vue-particles v-if="showParticles" id="tsparticles" @particles-loaded="particlesLoaded" url="/particles.json" />
-
+  <div class="min-h-screen flex flex-col justify-center items-center bg-gray-100 p-4 ">
     <!-- 타이머 표시 -->
     <div class="w-full max-w-md">
       <div class="h-4 bg-gray-300 rounded-full overflow-hidden mb-4">
@@ -99,12 +96,12 @@ onMounted(() => {
     </div>
     
     <!-- 단어 표시 -->
-    <div v-if="currentStage === 1" class="text-9xl font-bold text-gray-800 mb-4">
+    <div v-if="currentStage === 1" class="text-9xl font-bold text-gray-800 mb-4 relative z-10">
       {{ currentWord.word }}
     </div>
-    <div v-if="currentStage > 1" class="flex flex-col items-center">
+    <div v-if="currentStage > 1" class="flex flex-col items-center relative z-10">
       <div class="text-9xl font-bold text-gray-800 mb-4">{{ currentWord.word }}</div>
-      <img :src="currentWord.image_url" alt="Image" class="max-w-96 object-cover rounded-md shadow-lg"/>
+      <img :src="currentWord.image_url" alt="Image" class="max-w-96 object-cover rounded-md shadow-lg z-10"/>
     </div>
 
     <!-- 입력과 제출 -->
@@ -116,7 +113,7 @@ onMounted(() => {
         placeholder="Type your answer..."
         class="p-2 border rounded-md"
       />
-      <button @click="checkAnswer" class="ml-2 px-4 py-2 bg-blue-500 text-white rounded-md">
+      <button @click="checkAnswer" class="ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md">
         Submit
       </button>
     </div>
@@ -127,8 +124,10 @@ onMounted(() => {
     </div>
     
     <!-- 다음 버튼 -->
-    <button v-if="isAnswerCorrect || currentStage === 3" @click="nextWord" class="mt-4 px-4 py-2 bg-green-500 text-white rounded-md">
+    <button v-if="isAnswerCorrect || currentStage === 3" @click="nextWord" class="mt-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md z-10">
       Next
     </button>
   </div>
+  <!-- 파티클 효과 -->
+  <vue-particles v-if="showParticles" id="tsparticles" @particles-loaded="particlesLoaded" url="/particles.json" />
 </template>
