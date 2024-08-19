@@ -238,12 +238,12 @@ onMounted(() => {
     </div>
     
     <!-- 단어 표시 -->
-    <div v-if="!isAnswerCorrect && currentStage === 1" class="text-9xl font-bold text-gray-800 mb-4 relative z-10">
+    <div v-if="!isAnswerCorrect && currentStage === 1" class="text-6xl xl:text-9xl font-bold text-gray-800 mb-4 relative z-10">
       {{ currentWord?.word }}
     </div>
     <div v-if="currentStage > 1 || isAnswerCorrect" class="flex flex-col items-center relative z-10">
-      <div class="text-9xl font-bold text-gray-800 mb-4">{{ currentWord?.word }}</div>
-      <img :src="currentWord?.image_url" alt="Image" class="max-w-96 object-cover rounded-md shadow-lg z-10"/>
+      <div class="text-6xl xl:text-9xl font-bold text-gray-800 mb-4">{{ currentWord?.word }}</div>
+      <img :src="currentWord?.image_url" alt="Image" class="max-w-80 xl:max-w-96 object-cover rounded-md shadow-lg z-10"/>
     </div>
 
     <!-- 입력과 제출 -->
@@ -288,7 +288,7 @@ onMounted(() => {
     </div>
     <!-- 하단 고정 푸터 -->
     <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200">
-      <p>version: 50af9a1</p>
+      <p>version: 4bd4c15</p>
     </footer>
   </div>
   <!-- 파티클 효과 -->
