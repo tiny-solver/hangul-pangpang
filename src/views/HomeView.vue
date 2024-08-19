@@ -1,7 +1,85 @@
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { type Container } from "@tsparticles/engine";
+import { useSpeechRecognition } from '@vueuse/core'
 
+const lang = ref('ko-KR');
+
+function sample<T>(arr: T[], size: number) {
+  const shuffled = arr.slice(0)
+  let i = arr.length
+  let temp: T
+  let index: number
+  while (i--) {
+    index = Math.floor((i + 1) * Math.random())
+    temp = shuffled[index]
+    shuffled[index] = shuffled[i]
+    shuffled[i] = temp
+  }
+  return shuffled.slice(0, size)
+}
+
+const speech = useSpeechRecognition({
+  lang,
+  continuous: true,
+})
+
+const color = ref('transparent')
+
+const colors = ['aqua', 'azure', 'beige', 'bisque', 'black', 'blue', 'brown', 'chocolate', 'coral', 'crimson', 'cyan', 'fuchsia', 'ghostwhite', 'gold', 'goldenrod', 'gray', 'green', 'indigo', 'ivory', 'khaki', 'lavender', 'lime', 'linen', 'magenta', 'maroon', 'moccasin', 'navy', 'olive', 'orange', 'orchid', 'peru', 'pink', 'plum', 'purple', 'red', 'salmon', 'sienna', 'silver', 'snow', 'tan', 'teal', 'thistle', 'tomato', 'turquoise', 'violet', 'white', 'yellow', 'transparent']
+const grammar = `#JSGF V1.0; grammar colors; public <color> = ${colors.join(' | ')} ;`
+
+if (speech.isSupported.value) {
+  // @ts-expect-error missing types
+  const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList
+  const speechRecognitionList = new SpeechGrammarList()
+  speechRecognitionList.addFromString(grammar, 1)
+  speech.recognition!.grammars = speechRecognitionList
+
+  speech.recognition!.onsoundstart = () => {
+    console.log('onsoundstart')
+  }
+  speech.recognition!.onsoundend = () => {
+    console.log('onsoundend')
+  }
+  speech.recognition!.onspeechstart = () => {
+    console.log('onspeechstart')
+  }
+  speech.recognition!.onspeechend = () => {
+    console.log('onspeechend')
+  }
+  speech.recognition!.onaudiostart = () => {
+    console.log('onaudiostart')
+  }
+  speech.recognition!.onaudioend = () => {
+    console.log('onaudioend')
+  }
+
+  watch(speech.result, () => {
+    for (const i of speech.result.value.toLowerCase().split(' ').reverse()) {
+      if (colors.includes(i)) {
+        color.value = i
+        break
+      }
+    }
+  })
+}
+
+
+const sampled = ref<string[]>([])
+
+function start() {
+  color.value = 'transparent'
+  speech.result.value = ''
+  sampled.value = sample(colors, 5)
+  speech.start()
+}
+
+const { isListening, isSupported, stop, result } = speech
+
+const selectedLanguage = ref(lang.value)
+watch(lang, lang => isListening.value ? null : selectedLanguage.value = lang)
+watch(isListening, isListening => isListening ? null : selectedLanguage.value = lang.value)
 
 interface Word {
   word: string;
@@ -29,6 +107,8 @@ const isAnswerCorrect = ref(false);
 const showParticles = ref(false);
 const timeLeft = ref(15);
 let timer: ReturnType<typeof setInterval>;
+const timeWaitAnswerCheckLeft = ref(2); // 말하고 난 뒤 2초뒤 답 체크
+let timerSpeechIsAnswer: ReturnType<typeof setInterval>;
 
 const startGame = () => {
   nextWord();
@@ -64,7 +144,24 @@ const startTimer = () => {
       timeLeft.value = 15;
     } else {
       clearInterval(timer);
+      checkAnswer();
       currentStage.value = 3;
+    }
+  }, 1000);
+};
+
+const startTimerWaitingSpeechIsAnswer = () => {
+  if (timerSpeechIsAnswer) {
+    clearInterval(timerSpeechIsAnswer);
+  }
+  timeWaitAnswerCheckLeft.value = 2;
+
+  timerSpeechIsAnswer = setInterval(() => {
+    if (timeWaitAnswerCheckLeft.value > 0) {
+      timeWaitAnswerCheckLeft.value -= 1;
+    } else {
+      clearInterval(timerSpeechIsAnswer);
+      checkAnswer();
     }
   }, 1000);
 };
@@ -72,6 +169,20 @@ const startTimer = () => {
 const particlesLoaded = async (container: Container) => {
     console.log("Particles container loaded", container);
 };
+
+const startRecording = () => {
+  start();
+};
+
+const stopRecording = () => {
+  stop();
+}
+
+watch(result, () => {
+  userAnswer.value = result.value.trim();
+  console.log('result changed', result.value);
+  startTimerWaitingSpeechIsAnswer();
+});
 
 onMounted(() => {
   startGame();
@@ -127,7 +238,73 @@ onMounted(() => {
     <button v-if="isAnswerCorrect || currentStage === 3" @click="nextWord" class="mt-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md z-10">
       Next
     </button>
+    <!-- 음성 녹음 버튼 및 스피너 -->
+    <div v-if="currentStage !== 3" class="mt-4 flex flex-col items-center">
+      <button @click="isListening ? stopRecording() : startRecording()" 
+              :class="isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'"
+              class="px-4 py-2 text-white rounded-md">
+        {{ isListening ? 'Stop Recording' : 'Start Recording' }}
+      </button>
+      <!-- 말하는 아이콘 추가 -->
+      <div v-if="isListening" class="speaking-icon"></div>
+    </div>
   </div>
   <!-- 파티클 효과 -->
   <vue-particles v-if="showParticles" id="tsparticles" @particles-loaded="particlesLoaded" url="/particles.json" />
 </template>
+
+
+<style scoped>
+/* 스피너 기본 스타일 */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 8px solid #ccc;
+  border-top: 8px solid #3498db;
+  border-radius: 50%;
+  animation: spin 2s linear infinite;
+  transition: transform 0.3s ease-in-out;
+}
+
+/* 사용자가 말할 때 스피너 확대 */
+.spinner-grow {
+  width: 50px;
+  height: 50px;
+  border: 8px solid #ccc;
+  border-top: 8px solid #3498db;
+  border-radius: 50%;
+  animation: spin 2s linear infinite;
+  transition: transform 0.3s ease-in-out;
+  transform: scale(1.5);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 말하는 아이콘에 대한 애니메이션 정의 */
+.speaking-icon {
+  width: 30px;
+  height: 30px;
+  background-color: #ff5733;
+  border-radius: 50%;
+  animation: pulse 1s infinite;
+  margin: 10px auto;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.7;
+  }
+}
+</style>
