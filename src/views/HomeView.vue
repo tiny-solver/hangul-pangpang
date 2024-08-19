@@ -286,6 +286,10 @@ onMounted(() => {
         <option value="tinyping">티니핑</option>
       </select>
     </div>
+    <!-- 하단 고정 푸터 -->
+    <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200">
+      <p>version: 50af9a1</p>
+    </footer>
   </div>
   <!-- 파티클 효과 -->
   <vue-particles v-if="showParticles" id="tsparticles" @particles-loaded="particlesLoaded" url="/particles.json" />
