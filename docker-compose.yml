@@ -1,0 +1,15 @@
+services:
+ 
+  frontend:
+    build:
+      context: frontend/
+      dockerfile: Dockerfile
+    image: ghcr.io/tiny-solver/hangulpangpang-frontend:latest
+    tty: true
+    stdin_open: true
+    ports:
+      - "4173:4173"
+      - "5173:5173"
+
+    # entrypoint: /bin/sh
+    # command: ls -al
