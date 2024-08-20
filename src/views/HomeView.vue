@@ -211,7 +211,8 @@ const stopRecording = () => {
 watch(result, () => {
   userAnswer.value = result.value.trim();
   console.log('result changed', result.value);
-  startTimerWaitingSpeechIsAnswer();
+  checkAnswer();
+  //startTimerWaitingSpeechIsAnswer();
 });
 
 onMounted(() => {
