@@ -219,6 +219,9 @@ onMounted(() => {
   loadWordPool();
   // startGame();
 });
+
+const gitSha = import.meta.env.VITE_GIT_SHA || 'local';
+console.log('gitSha', gitSha);
 </script>
 
 
@@ -289,7 +292,7 @@ onMounted(() => {
     </div>
     <!-- 하단 고정 푸터 -->
     <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200">
-      <p>version: 4bd4c15</p>
+      <p>version: {{ gitSha }}</p>
     </footer>
   </div>
   <!-- 파티클 효과 -->

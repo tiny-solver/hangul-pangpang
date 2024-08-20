@@ -5,6 +5,19 @@ import vue from '@vitejs/plugin-vue'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
 
+// get git HEAD`s short sha and set it as VITE_GIT_SHA
+import { execSync } from 'child_process'
+
+// if not in docker, use local git sha
+if (!process.env.GITHUB_SHA) {
+  const gitSha = execSync('git rev-parse --short HEAD').toString().trim()
+  process.env.VITE_GIT_SHA = gitSha + '-local'
+  console.log(`VITE_GIT_SHA: ${gitSha}`)
+} else {
+  process.env.VITE_GIT_SHA = process.env.GITHUB_SHA
+  console.log(`VITE_GIT_SHA: ${process.env.GITHUB_SHA}`)
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   // base: '/timecapsule/',
