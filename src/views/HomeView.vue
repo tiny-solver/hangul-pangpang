@@ -37,9 +37,13 @@ const grammar = `#JSGF V1.0; grammar colors; public <color> = ${colors.join(' | 
 if (speech.isSupported.value) {
   // @ts-expect-error missing types
   const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList
-  const speechRecognitionList = new SpeechGrammarList()
-  speechRecognitionList.addFromString(grammar, 1)
-  speech.recognition!.grammars = speechRecognitionList
+  if (!SpeechGrammarList) {
+    console.error('SpeechGrammarList is not supported')
+  } else {
+    const speechRecognitionList = new SpeechGrammarList()
+    speechRecognitionList.addFromString(grammar, 1)
+    speech.recognition!.grammars = speechRecognitionList
+  }
 
   speech.recognition!.onsoundstart = () => {
     console.log('onsoundstart')
