@@ -124,7 +124,8 @@ const isAnswerCorrect = ref(false);
 const showParticles = ref(false);
 const timeLeft = ref(15);
 let timer: ReturnType<typeof setInterval>;
-const timeWaitAnswerCheckLeft = ref(2); // 말하고 난 뒤 2초뒤 답 체크
+const waitTimeMS = 300;
+const timeWaitAnswerCheckLeft = ref(waitTimeMS); // 말하고 난 뒤 2초뒤 답 체크
 let timerSpeechIsAnswer: ReturnType<typeof setInterval>;
 
 const startGame = () => {
@@ -188,16 +189,16 @@ const startTimerWaitingSpeechIsAnswer = () => {
   if (timerSpeechIsAnswer) {
     clearInterval(timerSpeechIsAnswer);
   }
-  timeWaitAnswerCheckLeft.value = 2;
+  timeWaitAnswerCheckLeft.value = waitTimeMS;
 
   timerSpeechIsAnswer = setInterval(() => {
     if (timeWaitAnswerCheckLeft.value > 0) {
-      timeWaitAnswerCheckLeft.value -= 1;
+      timeWaitAnswerCheckLeft.value -= 100;
     } else {
       clearInterval(timerSpeechIsAnswer);
       checkAnswer();
     }
-  }, 1000);
+  }, 100);
 };
 
 const particlesLoaded = async (container: Container) => {
@@ -215,8 +216,8 @@ const stopRecording = () => {
 watch(result, () => {
   userAnswer.value = result.value.trim();
   console.log('result changed', result.value);
-  checkAnswer();
-  //startTimerWaitingSpeechIsAnswer();
+  // checkAnswer();
+  startTimerWaitingSpeechIsAnswer();
 });
 
 onMounted(() => {
