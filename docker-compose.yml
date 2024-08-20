@@ -4,6 +4,8 @@ services:
     build:
       context: frontend/
       dockerfile: Dockerfile
+      args:
+        - SHORT_SHA=${SHORT_SHA}
     image: ghcr.io/tiny-solver/hangulpangpang-frontend:latest
     tty: true
     stdin_open: true

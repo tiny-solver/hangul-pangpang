@@ -9,13 +9,13 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 import { execSync } from 'child_process'
 
 // if not in docker, use local git sha
-if (!process.env.GITHUB_SHA) {
+if (!process.env.SHORT_SHA) {
   const gitSha = execSync('git rev-parse --short HEAD').toString().trim()
   process.env.VITE_GIT_SHA = gitSha + '-local'
   console.log(`VITE_GIT_SHA: ${gitSha}`)
 } else {
-  process.env.VITE_GIT_SHA = process.env.GITHUB_SHA
-  console.log(`VITE_GIT_SHA: ${process.env.GITHUB_SHA}`)
+  process.env.VITE_GIT_SHA = process.env.SHORT_SHA
+  console.log(`VITE_GIT_SHA: ${process.env.SHORT_SHA}`)
 }
 
 // https://vitejs.dev/config/
