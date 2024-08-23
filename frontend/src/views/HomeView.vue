@@ -249,6 +249,10 @@ const stopRecording = () => {
 }
 
 watch(speech.result, () => {
+  if (currentStage.value === Stage.Stage3_Result) {
+    return;
+  }
+  
   console.log('watch speech.result =======');
   // hueristic: if there are more than 1 words, start VAD timer
   const words = speech.result.value.trim().split(' ');
