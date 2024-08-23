@@ -6,6 +6,7 @@ import { useSpeechRecognition } from '@vueuse/core'
 // constants
 const timeOut = 15; // 15 seconds
 const waitTimeMS = 200; // 0.2 seconds
+const waitTimeVADInMS = 1000; // 1 seconds
 const correctSound = new Audio('/sounds/correct-sound.mp3');
 const correctSound2 = new Audio('/sounds/correct-sound2.mp3');
 const incorrectSound = new Audio('/sounds/incorrect-sound.mp3');
@@ -17,6 +18,7 @@ const speech = useSpeechRecognition({
 })
 
 if (speech.isSupported.value) {
+  
   speech.recognition!.onsoundstart = () => {
     console.log('onsoundstart')
   }
@@ -37,11 +39,30 @@ if (speech.isSupported.value) {
   }
 }
 
+function setupGrammerList(words: string[]) {
+  // @ts-expect-error missing types
+  const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList
+  if (!SpeechGrammarList) {
+    console.warn('SpeechGrammarList is not supported');
+  } else {
+    const grammar = `#JSGF V1.0; grammar words; public <words> = ${words.join(' | ')} ;`
+
+    // if grammerlist supported, set it
+    const speechRecognitionList = new SpeechGrammarList();
+    speechRecognitionList.addFromString(grammar, 1);
+    speech.recognition!.grammars = speechRecognitionList;
+
+    console.log('[*] setupGrammerList:', words);
+  }
+}
+
 function startGame(isNewGame = false) {
   if (isNewGame) {
     // shuffle word pool
     wordPoolForGame.value = [...wordPool.value];
     wordPoolForGame.value.sort(() => Math.random() - 0.5);
+    console.log('setup new game, wordPoolForGame:', wordPoolForGame.value.length, wordPoolForGame.value);
+    setupGrammerList(wordPoolForGame.value.map(w => w.word));
   }
   resetGameState();
   nextWord();
@@ -100,6 +121,10 @@ let timerGame: ReturnType<typeof setInterval>;
 const waitTimeLeftGradingAnswerInMS = ref(waitTimeMS);
 let timerDelayGradingAnswer: ReturnType<typeof setInterval>;
 
+  // 정답 체크를 위한 딜레이, 음성 입력 후 waitTimeMS초 뒤에 체크
+const waitTimeLeftVADInMS = ref(waitTimeVADInMS);
+let timerVAD: ReturnType<typeof setInterval>;
+
 const resetGameState = () => {
   // reset
   clearInterval(timerGame);
@@ -117,7 +142,11 @@ const nextWord = () => {
     wordPoolForGame.value = [...wordPool.value];
   }
 
-  currentWord.value = wordPoolForGame.value[Math.floor(Math.random() * wordPoolForGame.value.length)];
+  const pickIndex = Math.floor(Math.random() * wordPoolForGame.value.length);
+  currentWord.value = wordPoolForGame.value[pickIndex];
+  wordPoolForGame.value.splice(pickIndex, 1);
+
+  console.log("nextWord: ", currentWord.value, ", leftCount: ", wordPoolForGame.value.length);
 };
 
 const gradeAnswer = () => {
@@ -150,7 +179,6 @@ const startGameTimer = () => {
       timeLeftGame.value -= 1;
     } else {
       callbackTimeOut();
-      
     }
   }, 1000);
 };
@@ -169,6 +197,23 @@ const callbackTimeOut = () => {
   }
 }
 
+const startVADTimer = () => {
+  if (timerVAD) {
+    clearInterval(timerVAD);
+  }
+  waitTimeLeftVADInMS.value = waitTimeVADInMS;
+  isSomeoneSaying.value = true;
+
+  timerVAD = setInterval(() => {
+    if (waitTimeLeftVADInMS.value > 0) {
+      waitTimeLeftVADInMS.value -= 100;
+    } else {
+      clearInterval(timerVAD);
+      isSomeoneSaying.value = false;
+    }
+  }, 100);
+};
+
 // delay grading answer
 const delayTimerGradingAnswer = (delayMS: number) => {
   if (timerDelayGradingAnswer) {
@@ -181,7 +226,11 @@ const delayTimerGradingAnswer = (delayMS: number) => {
       waitTimeLeftGradingAnswerInMS.value -= 100;
     } else {
       clearInterval(timerDelayGradingAnswer);
-      gradeAnswer();
+      if (userAnswer.value.trim() !== '') {
+        gradeAnswer();
+      } else {
+        console.log('ignore empty answer');
+      }
     }
   }, 100);
 };
@@ -200,15 +249,52 @@ const stopRecording = () => {
 }
 
 watch(speech.result, () => {
-  userAnswer.value = speech.result.value.trim();
-  console.log('result changed', speech.result.value);
+  console.log('watch speech.result =======');
+  // hueristic: if there are more than 1 words, start VAD timer
+  const words = speech.result.value.trim().split(' ');
+  if (words.length > 0) {
+    startVADTimer();
+    console.log('startVADTimer');
+  } else {
+    console.log('no words')
+  }
+
+  console.log('speech.result changed: ', speech.result.value, words);
+  
+  let foundAnswer = false;
+  for (const i of words) {
+    if (currentWord.value?.word.toLowerCase() === i.toLowerCase()) {
+      userAnswer.value = i;
+      foundAnswer = true;
+      console.log('[*] found answer: ', i, words.length);
+      break;
+    }
+  }
+
+  // combine all words and check answer
+  // join 2,3,... length of words
+  if (!foundAnswer) {
+    for (let i = 2; i <= words.length; i++) {
+      const combined = words.slice(0, i).join('');
+      // console.log('combined:', combined);
+      if (currentWord.value?.word.toLowerCase() === combined.toLowerCase()) {
+        userAnswer.value = combined;
+        foundAnswer = true;
+        console.log('[*] found answer: ', combined, words.length);
+        break;
+      }
+    }
+  }
+
+  if (!foundAnswer) {
+    userAnswer.value = speech.result.value.trim();
+  }
   
   delayTimerGradingAnswer(waitTimeMS);
 });
 
 onMounted(() => {
   loadWordPool();
-  // startGame();
 });
 
 const gitSha = import.meta.env.VITE_GIT_SHA || 'local';
@@ -257,10 +343,10 @@ console.log('gitSha', gitSha);
         v-model="userAnswer" 
         @keyup.enter="gradeAnswer"
         placeholder="Type your answer..."
-        class="p-2 border rounded-md"
+        class="p-2 border rounded-md text-2xl"
       />
-      <button @click="gradeAnswer" class="ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md">
-        Submit
+      <button @click="gradeAnswer" class="ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-2xl">
+        💯
       </button>
     </div>
     
@@ -271,8 +357,8 @@ console.log('gitSha', gitSha);
     
     <!-- 다음 버튼 -->
     <button v-if="currentStage === Stage.Stage3_Result"
-      @click="startGame()" class="mt-4 px-4 py-2  text-white rounded-md z-10" :class="isAnswerCorrect ? 'bg-green-500 hover:bg-green-600': 'bg-orange-300 hover:bg-orange-400'">
-      {{ isAnswerCorrect ? '🎉 Correct!' : 'Next' }}
+      @click="startGame()" class="mt-4 px-4 py-2  text-white rounded-md z-10 text-2xl" :class="isAnswerCorrect ? 'bg-green-500 hover:bg-green-600': 'bg-orange-400 hover:bg-orange-500'">
+      {{ isAnswerCorrect ? '🎉' : '▶' }}
     </button>
     <!-- 음성 녹음 버튼 및 스피너 -->
     <div v-if="currentStage !== Stage.Stage3_Result" class="mt-4 flex flex-col items-center">
@@ -301,49 +387,6 @@ console.log('gitSha', gitSha);
 
 
 <style scoped>
-/* 스피너 기본 스타일 */
-.spinner {
-  width: 50px;
-  height: 50px;
-  border: 8px solid #ccc;
-  border-top: 8px solid #3498db;
-  border-radius: 50%;
-  animation: spin 2s linear infinite;
-  transition: transform 0.3s ease-in-out;
-}
-
-/* 사용자가 말할 때 스피너 확대 */
-.spinner-grow {
-  width: 50px;
-  height: 50px;
-  border: 8px solid #ccc;
-  border-top: 8px solid #3498db;
-  border-radius: 50%;
-  animation: spin 2s linear infinite;
-  transition: transform 0.3s ease-in-out;
-  transform: scale(1.5);
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-@keyframes pulse {
-  0% {
-    transform: scale(0.95);
-    opacity: 0.7;
-  }
-  70% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(0.95);
-    opacity: 0.7;
-  }
-}
-
 @keyframes shake {
   0% { transform: translateX(0); }
   25% { transform: translateX(-10px); }
