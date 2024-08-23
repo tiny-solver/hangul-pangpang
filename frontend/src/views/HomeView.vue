@@ -79,6 +79,7 @@ interface Word {
   word: string;
   image_url: string;
   english: string;
+  alternative?: string;
 }
 
 const wordPool = ref<Word[]>([]);
@@ -252,7 +253,7 @@ watch(speech.result, () => {
   if (currentStage.value === Stage.Stage3_Result) {
     return;
   }
-  
+
   console.log('watch speech.result =======');
   // hueristic: if there are more than 1 words, start VAD timer
   const words = speech.result.value.trim().split(' ');
@@ -267,8 +268,9 @@ watch(speech.result, () => {
   
   let foundAnswer = false;
   for (const i of words) {
-    if (currentWord.value?.word.toLowerCase() === i.toLowerCase()) {
-      userAnswer.value = i;
+    if (currentWord.value?.word.toLowerCase() === i.toLowerCase()
+      || currentWord.value?.alternative?.toLowerCase() === i.toLowerCase()) {
+      userAnswer.value = currentWord.value?.word;
       foundAnswer = true;
       console.log('[*] found answer: ', i, words.length);
       break;
@@ -281,8 +283,9 @@ watch(speech.result, () => {
     for (let i = 2; i <= words.length; i++) {
       const combined = words.slice(0, i).join('');
       // console.log('combined:', combined);
-      if (currentWord.value?.word.toLowerCase() === combined.toLowerCase()) {
-        userAnswer.value = combined;
+      if (currentWord.value?.word.toLowerCase() === combined.toLowerCase()
+        || currentWord.value?.alternative?.toLowerCase() === combined.toLowerCase()) {
+        userAnswer.value = currentWord.value?.word;
         foundAnswer = true;
         console.log('[*] found answer: ', combined, words.length);
         break;
@@ -293,7 +296,7 @@ watch(speech.result, () => {
   if (!foundAnswer) {
     userAnswer.value = speech.result.value.trim();
   }
-  
+
   delayTimerGradingAnswer(waitTimeMS);
 });
 
