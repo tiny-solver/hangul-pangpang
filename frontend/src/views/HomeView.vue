@@ -3,48 +3,20 @@ import { ref, onMounted, watch } from 'vue';
 import { type Container } from "@tsparticles/engine";
 import { useSpeechRecognition } from '@vueuse/core'
 
+// constants
+const timeOut = 15; // 15 seconds
+const waitTimeMS = 200; // 0.2 seconds
 const correctSound = new Audio('/sounds/correct-sound.mp3');
 const correctSound2 = new Audio('/sounds/correct-sound2.mp3');
 const incorrectSound = new Audio('/sounds/incorrect-sound.mp3');
 
-
 const lang = ref('ko-KR');
-
-function sample<T>(arr: T[], size: number) {
-  const shuffled = arr.slice(0)
-  let i = arr.length
-  let temp: T
-  let index: number
-  while (i--) {
-    index = Math.floor((i + 1) * Math.random())
-    temp = shuffled[index]
-    shuffled[index] = shuffled[i]
-    shuffled[i] = temp
-  }
-  return shuffled.slice(0, size)
-}
-
 const speech = useSpeechRecognition({
   lang,
   continuous: true,
 })
 
-const color = ref('transparent')
-
-const colors = ['aqua', 'azure', 'beige', 'bisque', 'black', 'blue', 'brown', 'chocolate', 'coral', 'crimson', 'cyan', 'fuchsia', 'ghostwhite', 'gold', 'goldenrod', 'gray', 'green', 'indigo', 'ivory', 'khaki', 'lavender', 'lime', 'linen', 'magenta', 'maroon', 'moccasin', 'navy', 'olive', 'orange', 'orchid', 'peru', 'pink', 'plum', 'purple', 'red', 'salmon', 'sienna', 'silver', 'snow', 'tan', 'teal', 'thistle', 'tomato', 'turquoise', 'violet', 'white', 'yellow', 'transparent']
-const grammar = `#JSGF V1.0; grammar colors; public <color> = ${colors.join(' | ')} ;`
-
 if (speech.isSupported.value) {
-  // @ts-expect-error missing types
-  const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList
-  if (!SpeechGrammarList) {
-    console.error('SpeechGrammarList is not supported')
-  } else {
-    const speechRecognitionList = new SpeechGrammarList()
-    speechRecognitionList.addFromString(grammar, 1)
-    speech.recognition!.grammars = speechRecognitionList
-  }
-
   speech.recognition!.onsoundstart = () => {
     console.log('onsoundstart')
   }
@@ -63,34 +35,24 @@ if (speech.isSupported.value) {
   speech.recognition!.onaudioend = () => {
     console.log('onaudioend')
   }
-
-  watch(speech.result, () => {
-    for (const i of speech.result.value.toLowerCase().split(' ').reverse()) {
-      if (colors.includes(i)) {
-        color.value = i
-        break
-      }
-    }
-  })
 }
 
-
-const sampled = ref<string[]>([])
-
-function start() {
-  color.value = 'transparent'
-  speech.result.value = ''
-  sampled.value = sample(colors, 5)
-  speech.start()
+function startGame(isNewGame = false) {
+  if (isNewGame) {
+    // shuffle word pool
+    wordPoolForGame.value = [...wordPool.value];
+    wordPoolForGame.value.sort(() => Math.random() - 0.5);
+  }
+  resetGameState();
+  nextWord();
+  // start timer
+  startGameTimer();
 }
 
-const { isListening, isSupported, stop, result } = speech
+const { isListening, isSupported } = speech
+const isSomeoneSaying = ref(false);
 
-const selectedTheme = ref('fruits'); // 기본 테마
-
-const selectedLanguage = ref(lang.value)
-watch(lang, lang => isListening.value ? null : selectedLanguage.value = lang)
-watch(isListening, isListening => isListening ? null : selectedLanguage.value = lang.value)
+const selectedTheme = ref('tinyping'); // 기본 테마, 단어풀
 
 interface Word {
   word: string;
@@ -99,16 +61,18 @@ interface Word {
 }
 
 const wordPool = ref<Word[]>([]);
+const wordPoolForGame = ref<Word[]>([]);
 const currentWord = ref<Word | null>(null);
 
 const loadWordPool = async () => {
   try {
-    console.log('load')
+    console.log('async load word pool')
     const response = await fetch(`/${selectedTheme.value}.json`);
-    console.log('loaded')
+    
     if (response.ok) {
       wordPool.value = await response.json();
-      nextWord();
+      console.log('loaded, start new Game')
+      startGame(true);
     } else {
       console.error('Failed to load JSON file:', response.statusText);
     }
@@ -117,39 +81,50 @@ const loadWordPool = async () => {
   }
 };
 
+enum Stage {
+  Stage1_JustWord = 1,
+  Stage2_WordWithImages = 2,
+  Stage3_Result = 3,
+}
 
-const currentStage = ref(1);
+const currentStage = ref(Stage.Stage1_JustWord);
 const userAnswer = ref('');
 const isAnswerCorrect = ref(false);
 const showParticles = ref(false);
-const timeLeft = ref(15);
-let timer: ReturnType<typeof setInterval>;
-const waitTimeMS = 300;
-const timeWaitAnswerCheckLeft = ref(waitTimeMS); // 말하고 난 뒤 2초뒤 답 체크
-let timerSpeechIsAnswer: ReturnType<typeof setInterval>;
 
-const startGame = () => {
-  nextWord();
-};
+// 정답을 맞추는데 남은 시간
+const timeLeftGame = ref(timeOut);
+let timerGame: ReturnType<typeof setInterval>;
 
-const nextWord = () => {
-  if (wordPool.value.length > 0) {
-    currentWord.value = wordPool.value[Math.floor(Math.random() * wordPool.value.length)];
-  }
+// 정답 체크를 위한 딜레이, 음성 입력 후 waitTimeMS초 뒤에 체크
+const waitTimeLeftGradingAnswerInMS = ref(waitTimeMS);
+let timerDelayGradingAnswer: ReturnType<typeof setInterval>;
+
+const resetGameState = () => {
+  // reset
+  clearInterval(timerGame);
+  speech.result.value = '';
+  showParticles.value = false;
   userAnswer.value = '';
   isAnswerCorrect.value = false;
-  currentStage.value = 1;
-  timeLeft.value = 15;
-  startTimer();
+  currentStage.value = Stage.Stage1_JustWord;
+  timeLeftGame.value = timeOut;
+}
 
-  showParticles.value = false;
+const nextWord = () => {
+  // pick a word
+  if (wordPoolForGame.value.length === 0) {
+    wordPoolForGame.value = [...wordPool.value];
+  }
+
+  currentWord.value = wordPoolForGame.value[Math.floor(Math.random() * wordPoolForGame.value.length)];
 };
 
-const checkAnswer = () => {
-  if (userAnswer.value.toLowerCase() === currentWord.value!.english.toLowerCase()
-  || userAnswer.value.toLowerCase() === currentWord.value!.word.toLowerCase()) {
+const gradeAnswer = () => {
+  if (userAnswer.value.toLowerCase() === currentWord.value!.word.toLowerCase()) {
     isAnswerCorrect.value = true;
-    clearInterval(timer);
+    currentStage.value = Stage.Stage3_Result;
+    clearInterval(timerGame);
 
     showParticles.value = true;
     
@@ -159,7 +134,6 @@ const checkAnswer = () => {
   } else {
     // sound effect for wrong answer
     incorrectSound.play();
-
     const rootDiv = document.querySelector('.root-div'); // root div 선택
     if (rootDiv) {
       rootDiv.classList.add('shake');
@@ -170,33 +144,44 @@ const checkAnswer = () => {
   }
 };
 
-const startTimer = () => {
-  timer = setInterval(() => {
-    if (timeLeft.value > 0) {
-      timeLeft.value -= 1;
-    } else if (currentStage.value === 1) {
-      currentStage.value = 2;
-      timeLeft.value = 15;
+const startGameTimer = () => {
+  timerGame = setInterval(() => {
+    if (timeLeftGame.value > 0) {
+      timeLeftGame.value -= 1;
     } else {
-      clearInterval(timer);
-      checkAnswer();
-      currentStage.value = 3;
+      callbackTimeOut();
+      
     }
   }, 1000);
 };
 
-const startTimerWaitingSpeechIsAnswer = () => {
-  if (timerSpeechIsAnswer) {
-    clearInterval(timerSpeechIsAnswer);
+const callbackTimeOut = () => {
+  switch(currentStage.value) {
+    case Stage.Stage1_JustWord:
+      currentStage.value = Stage.Stage2_WordWithImages;
+      timeLeftGame.value = timeOut * 2;
+      break;
+    case Stage.Stage2_WordWithImages:
+      currentStage.value = Stage.Stage3_Result;
+      clearInterval(timerGame);
+      gradeAnswer();
+      break;
   }
-  timeWaitAnswerCheckLeft.value = waitTimeMS;
+}
 
-  timerSpeechIsAnswer = setInterval(() => {
-    if (timeWaitAnswerCheckLeft.value > 0) {
-      timeWaitAnswerCheckLeft.value -= 100;
+// delay grading answer
+const delayTimerGradingAnswer = (delayMS: number) => {
+  if (timerDelayGradingAnswer) {
+    clearInterval(timerDelayGradingAnswer);
+  }
+  waitTimeLeftGradingAnswerInMS.value = delayMS;
+
+  timerDelayGradingAnswer = setInterval(() => {
+    if (waitTimeLeftGradingAnswerInMS.value > 0) {
+      waitTimeLeftGradingAnswerInMS.value -= 100;
     } else {
-      clearInterval(timerSpeechIsAnswer);
-      checkAnswer();
+      clearInterval(timerDelayGradingAnswer);
+      gradeAnswer();
     }
   }, 100);
 };
@@ -206,18 +191,19 @@ const particlesLoaded = async (container: Container) => {
 };
 
 const startRecording = () => {
-  start();
+  speech.start();
+  console.log('startRecording');
 };
 
 const stopRecording = () => {
-  stop();
+  speech.stop();
 }
 
-watch(result, () => {
-  userAnswer.value = result.value.trim();
-  console.log('result changed', result.value);
-  // checkAnswer();
-  startTimerWaitingSpeechIsAnswer();
+watch(speech.result, () => {
+  userAnswer.value = speech.result.value.trim();
+  console.log('result changed', speech.result.value);
+  
+  delayTimerGradingAnswer(waitTimeMS);
 });
 
 onMounted(() => {
@@ -238,11 +224,11 @@ console.log('gitSha', gitSha);
       <div class="h-4 bg-gray-300 rounded-full overflow-hidden mb-4">
         <div
           class="h-full bg-blue-500 transition-all duration-1000"
-          :style="{ width: `${(timeLeft / 15) * 100}%` }"
+          :style="{ width: `${(timeLeftGame / 15) * 100}%` }"
         ></div>
       </div>
       <div class="text-right text-gray-700 mb-4">
-        Time left: {{ timeLeft }} seconds
+        Time left: {{ timeLeftGame }} seconds
       </div>
     </div>
     
@@ -256,45 +242,54 @@ console.log('gitSha', gitSha);
     </div>
 
     <!-- 입력과 제출 -->
-    <div v-if="!isAnswerCorrect && currentStage !== 3" class="mt-4">
+    <div v-if="!isAnswerCorrect && currentStage !== 3" class="mt-4 relative">
+       <!-- 말하는 아이콘 추가 -->
+       <div v-if="isListening" class="absolute inset-y-0 left-[-2.5rem] flex items-center bg-blue-500">
+        <div v-if="isSomeoneSaying" class="absolute animate-ping text-2xl">
+          🎤
+        </div>
+        <div class="absolute text-2xl" :class="isSomeoneSaying ? '': 'opacity-25'">
+          🎤
+        </div>
+      </div>
       <input 
         type="text" 
         v-model="userAnswer" 
-        @keyup.enter="checkAnswer"
+        @keyup.enter="gradeAnswer"
         placeholder="Type your answer..."
         class="p-2 border rounded-md"
       />
-      <button @click="checkAnswer" class="ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md">
+      <button @click="gradeAnswer" class="ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md">
         Submit
       </button>
     </div>
     
     <!-- 정답 안내 -->
-    <div v-if="currentStage === 3" class="mt-4 text-red-600">
-      Time's up! The correct answer is: {{ currentWord?.english }}
+    <div v-if="currentStage === Stage.Stage3_Result && !isAnswerCorrect" class="mt-4 text-red-600">
+      Time's up! The correct answer is: {{ currentWord?.word }}
     </div>
     
     <!-- 다음 버튼 -->
-    <button v-if="isAnswerCorrect || currentStage === 3" @click="nextWord" class="mt-4 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-md z-10">
-      Next
+    <button v-if="currentStage === Stage.Stage3_Result"
+      @click="startGame()" class="mt-4 px-4 py-2  text-white rounded-md z-10" :class="isAnswerCorrect ? 'bg-green-500 hover:bg-green-600': 'bg-orange-300 hover:bg-orange-400'">
+      {{ isAnswerCorrect ? '🎉 Correct!' : 'Next' }}
     </button>
     <!-- 음성 녹음 버튼 및 스피너 -->
-    <div v-if="currentStage !== 3" class="mt-4 flex flex-col items-center">
+    <div v-if="currentStage !== Stage.Stage3_Result" class="mt-4 flex flex-col items-center">
       <button @click="isListening ? stopRecording() : startRecording()" 
               :class="isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'"
-              class="px-4 py-2 text-white rounded-md">
-        {{ isListening ? '🎤 Stop Recording' : '🎤 Start Recording' }}
+              class="px-4 py-2 text-2xl text-white rounded-md">
+        {{ isListening ? '🛑' : '🎤' }}
       </button>
-      <!-- 말하는 아이콘 추가 -->
-      <div v-if="isListening" class="speaking-icon"></div>
     </div>
-    <div class="mt-4">
-      <label for="theme-select" class="mr-2">Choose a wordpool:</label>
+    <header class="fixed top-0 left-0 w-full text-center py-2 bg-indigo-200">
+      <label for="theme-select" class="mr-2">단어장:</label>
       <select id="theme-select" v-model="selectedTheme" @change="loadWordPool">
-        <option value="fruits">과일들</option>
         <option value="tinyping">티니핑</option>
+        <option value="fruits">과일</option>
       </select>
-    </div>
+    </header>
+    
     <!-- 하단 고정 푸터 -->
     <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200">
       <p>version: {{ gitSha }}</p>
@@ -332,16 +327,6 @@ console.log('gitSha', gitSha);
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
-}
-
-/* 말하는 아이콘에 대한 애니메이션 정의 */
-.speaking-icon {
-  width: 30px;
-  height: 30px;
-  background-color: #ff5733;
-  border-radius: 50%;
-  animation: pulse 1s infinite;
-  margin: 10px auto;
 }
 
 @keyframes pulse {
