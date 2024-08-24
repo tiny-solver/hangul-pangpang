@@ -11,6 +11,17 @@ export type Person = {
   subRows?: Person[]
 }
 
+export type LoRAData = {
+  image: string
+  src_refer: string
+  caption: string
+}
+
+export type LoRADataset = {
+  title: string
+  data: LoRAData[]
+}
+
 const range = (len: number) => {
   const arr: number[] = []
   for (let i = 0; i < len; i++) {
@@ -32,6 +43,21 @@ const newPerson = (): Person => {
       'complicated',
       'single',
     ])[0]!,
+  }
+}
+
+export const newLoRAData = (): LoRAData => {
+  return {
+    image: faker.image.avatar(),
+    src_refer: faker.internet.url(),
+    caption: faker.lorem.sentence(),
+  }
+}
+
+export const newLoRADataset = (): LoRADataset => {
+  return {
+    title: faker.lorem.words(),
+    data: range(faker.number.int(10)).map(() => newLoRAData()),
   }
 }
 
