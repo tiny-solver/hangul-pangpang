@@ -5,6 +5,7 @@ export type Person = {
   lastName: string
   age: number
   visits: number
+  image: string
   progress: number
   status: 'relationship' | 'complicated' | 'single'
   subRows?: Person[]
@@ -24,6 +25,7 @@ const newPerson = (): Person => {
     lastName: faker.person.lastName(),
     age: faker.number.int(40),
     visits: faker.number.int(1000),
+    image: faker.image.avatar(),
     progress: faker.number.int(100),
     status: faker.helpers.shuffle<Person['status']>([
       'relationship',

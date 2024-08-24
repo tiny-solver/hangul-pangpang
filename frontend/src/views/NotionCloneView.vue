@@ -37,6 +37,11 @@ const columns = [
       )
     },
   },
+  columnHelper.accessor('image', {
+    header: () => 'Images',
+    footer: props => props.column.id,
+    cell: info => <img class="w-8 h-8 rounded-full" src={info.getValue()} />,
+  }),
   columnHelper.group({
     header: 'Name',
     footer: props => props.column.id,
@@ -68,6 +73,7 @@ const columns = [
             header: () => 'Visits',
             footer: props => props.column.id,
           }),
+          
           columnHelper.accessor('status', {
             header: 'Status',
             footer: props => props.column.id,
@@ -82,7 +88,7 @@ const columns = [
   }),
 ]
 
-const data = ref(makeData(10))
+const data = ref(makeData(15))
 const rowSelection = ref<RowSelectionState>({})
 
 const rerender = () => {
