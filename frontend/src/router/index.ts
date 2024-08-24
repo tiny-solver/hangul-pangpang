@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '@/views/HomeView.vue'
 import DemoView from '@/views/DemoView.vue'
+import NotionCloneView from '@/views/NotionCloneView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -9,6 +10,11 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView
+    },
+    {
+      path: '/notion',
+      name: 'Notion',
+      component: NotionCloneView
     },
     {
       path: '/demo',
