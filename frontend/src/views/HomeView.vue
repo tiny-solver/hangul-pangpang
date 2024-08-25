@@ -14,6 +14,14 @@ const correctSound = new Audio('/sounds/correct-sound.mp3');
 const correctSound2 = new Audio('/sounds/correct-sound2.mp3');
 const incorrectSound = new Audio('/sounds/incorrect-sound.mp3');
 
+function isIOS() {
+    return /iP(hone|od|ad)/.test(navigator.platform);
+}
+
+function isSafari() {
+    return /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+}
+
 const lang = ref('ko-KR');
 const speech = useSpeechRecognition({
   lang,
@@ -54,8 +62,11 @@ if (speech.isSupported.value) {
   speech.recognition.onresult = (event) => {
     console.log('onresult:', event.results);
     speech.result.value = event.results[event.results.length - 1][0].transcript;
-    console.log("speech onoff");
-    restartRecording(100);
+    
+    if (isIOS() || isSafari()) {
+      console.log("restartRecording for iOS/Safari");
+      restartRecording(100);
+    }
   }
   
 }
