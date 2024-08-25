@@ -142,7 +142,7 @@ function startGame(isNewGame = false) {
 const { isListening } = speech
 const isSomeoneSaying = ref(false);
 
-const selectedTheme = ref('tinyping'); // 기본 테마, 단어풀
+const selectedTheme = ref('fruits'); // 기본 테마, 단어풀
 
 interface Word {
   word: string;
