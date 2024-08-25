@@ -350,11 +350,11 @@ console.log('gitSha', gitSha);
         v-model="userAnswer" 
         @keyup.enter="gradeAnswer"
         placeholder="Type your answer..."
-        class="p-2 border rounded-md text-2xl"
+        class="p-2 border rounded-md xl:text-2xl"
       />
-      <button @click="gradeAnswer" class="ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-2xl">
+      <!-- <button @click="gradeAnswer" class="ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-md xl:text-2xl">
         💯
-      </button>
+      </button> -->
     </div>
     
     <!-- 정답 안내 -->

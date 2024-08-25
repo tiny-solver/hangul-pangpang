@@ -8,7 +8,7 @@ import {
 } from '@tanstack/vue-table'
 import { ref } from 'vue'
 
-import IndeterminateCheckbox from '@/components/InterminateCheckBox.vue'
+import IndeterminateCheckbox from '@/components/InterminateCheckbox.vue'
 import { makeData, type Person } from '@/makeData'
 
 const columnHelper = createColumnHelper<Person>()
