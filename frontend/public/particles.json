@@ -2,7 +2,7 @@
   "autoPlay": true,
   "background": {
     "color": {
-      "value": "#ff00"
+      "value": "#3f83f8"
     },
     "image": "",
     "position": "",
@@ -11,14 +11,14 @@
     "opacity": 1
   },
   "backgroundMask": {
-    "composite": "destination-out",
+    "composite": "overlay",
     "cover": {
       "color": {
-        "value": "#fff"
+        "value": "#000000"
       },
-      "opacity": 1
+      "opacity": 0
     },
-    "enable": false
+    "enable": true
   },
   "clear": true,
   "defaultThemes": {},
