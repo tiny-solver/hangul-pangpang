@@ -236,8 +236,8 @@ const gradeAnswer = () => {
     }
   } else {
     // sound effect for wrong answer
-    speech.stop();
     if (!isIOS() && !isSafari()) {
+      speech.stop();
       incorrectSound.play();
     }
 
