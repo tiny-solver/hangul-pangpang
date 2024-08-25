@@ -3,6 +3,9 @@ import { ref, onMounted, watch } from 'vue';
 import { type Container } from "@tsparticles/engine";
 import { useSpeechRecognition } from '@vueuse/core'
 
+let restartRecordingTimer: ReturnType<typeof setTimeout>;
+
+
 // constants
 const timeOut = 15; // 15 seconds
 const waitTimeMS = 200; // 0.2 seconds
@@ -52,10 +55,17 @@ if (speech.isSupported.value) {
     console.log('onresult:', event.results);
     speech.result.value = event.results[event.results.length - 1][0].transcript;
     console.log("speech onoff");
-    speech.stop();
-    speech.start();
+    restartRecording(100);
   }
   
+}
+
+function restartRecording(delayMS: number) {
+  speech.stop();
+  clearTimeout(restartRecordingTimer);
+  restartRecordingTimer = setTimeout(() => {
+    speech.start();
+  }, delayMS);
 }
 
 function setupGrammerList(words: string[]) {
