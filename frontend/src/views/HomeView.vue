@@ -230,13 +230,16 @@ const gradeAnswer = () => {
     speech.stop();
     console.log('stop speech recognition');
 
-    // sound effect for correct answer
-    correctSound.play();
-    correctSound2.play();
+    if (!isIOS() && !isSafari()) {
+      correctSound.play();
+      correctSound2.play();
+    }
   } else {
     // sound effect for wrong answer
     speech.stop();
-    incorrectSound.play();
+    if (!isIOS() && !isSafari()) {
+      incorrectSound.play();
+    }
 
 
     const rootDiv = document.querySelector('.root-div'); // root div 선택
