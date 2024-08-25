@@ -459,7 +459,7 @@ console.log('gitSha', gitSha);
     </div>
 
     <!-- 상단 고정 헤더 -->
-    <header class="fixed top-0 left-0 w-full text-center py-2 bg-indigo-200 z-11">
+    <header class="fixed top-0 left-0 w-full text-center py-2 bg-indigo-200 z-20">
       <label for="theme-select" class="mr-2">단어장:</label>
       <select id="theme-select" v-model="selectedTheme" @change="loadWordPool">
         <option value="tinyping">티니핑</option>
@@ -468,7 +468,7 @@ console.log('gitSha', gitSha);
     </header>
     
     <!-- 하단 고정 푸터 -->
-    <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200 z-11">
+    <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200 z-20">
       <p>version: {{ gitSha }}</p>
     </footer>
   </div>
