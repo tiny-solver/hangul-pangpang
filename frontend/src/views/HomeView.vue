@@ -6,6 +6,8 @@ import { useSpeechRecognition } from '@vueuse/core'
 let restartRecordingTimer: ReturnType<typeof setTimeout>;
 
 
+const inavailableSpeechRecognition = ref(false);
+
 // constants
 const timeOut = 15; // 15 seconds
 const waitTimeMS = 200; // 0.2 seconds
@@ -13,6 +15,26 @@ const waitTimeVADInMS = 1000; // 1 seconds
 const correctSound = new Audio('/sounds/correct-sound.mp3');
 const correctSound2 = new Audio('/sounds/correct-sound2.mp3');
 const incorrectSound = new Audio('/sounds/incorrect-sound.mp3');
+incorrectSound.addEventListener('play', () => {
+  console.log('incorrectSound play');
+  // if (isIOS() || isSafari()) {
+    console.log("restartRecording for iOS/Safari");
+    speech.stop();
+    inavailableSpeechRecognition.value = true;
+  // }
+});
+incorrectSound.addEventListener('ended', () => {
+  console.log('incorrectSound ended');
+  // if (isIOS() || isSafari()) {
+    console.log("restartRecording for iOS/Safari");
+    speech.start();
+    inavailableSpeechRecognition.value = false;
+  // }
+});
+
+correctSound.addEventListener('ended', () => {
+  correctSound.currentTime = 0;
+});
 
 function isIOS() {
     return /iP(hone|od|ad)/.test(navigator.platform);
@@ -63,10 +85,10 @@ if (speech.isSupported.value) {
     console.log('onresult:', event.results);
     speech.result.value = event.results[event.results.length - 1][0].transcript;
     
-    if (isIOS() || isSafari()) {
-      console.log("restartRecording for iOS/Safari");
-      restartRecording(100);
-    }
+    // if (isIOS() || isSafari()) {
+    //   console.log("restartRecording for iOS/Safari");
+    //   restartRecording(100);
+    // }
   }
   
 }
@@ -108,9 +130,16 @@ function startGame(isNewGame = false) {
   nextWord();
   // start timer
   startGameTimer();
+
+  if (speech != null) {
+    if (speech.isSupported.value && !speech.isListening.value) {
+      speech.start();
+      console.log('startGame => start speech recognition');
+    }
+  }
 }
 
-const { isListening, isSupported } = speech
+const { isListening } = speech
 const isSomeoneSaying = ref(false);
 
 const selectedTheme = ref('tinyping'); // 기본 테마, 단어풀
@@ -198,12 +227,18 @@ const gradeAnswer = () => {
 
     showParticles.value = true;
     
+    speech.stop();
+    console.log('stop speech recognition');
+
     // sound effect for correct answer
     correctSound.play();
     correctSound2.play();
   } else {
     // sound effect for wrong answer
+    speech.stop();
     incorrectSound.play();
+
+
     const rootDiv = document.querySelector('.root-div'); // root div 선택
     if (rootDiv) {
       rootDiv.classList.add('shake');
@@ -376,15 +411,6 @@ console.log('gitSha', gitSha);
 
     <!-- 입력과 제출 -->
     <div v-if="!isAnswerCorrect && currentStage !== 3" class="mt-4 relative">
-       <!-- 말하는 아이콘 추가 -->
-       <div v-if="isListening" class="absolute inset-y-0 left-[-2.5rem] flex items-center bg-blue-500">
-        <div v-if="isSomeoneSaying" class="absolute animate-ping text-2xl">
-          🎤
-        </div>
-        <div class="absolute text-2xl" :class="isSomeoneSaying ? '': 'opacity-25'">
-          🎤
-        </div>
-      </div>
       <input 
         type="text" 
         v-model="userAnswer" 
@@ -404,20 +430,33 @@ console.log('gitSha', gitSha);
     
     <!-- 다음 버튼 -->
     <button v-if="currentStage === Stage.Stage3_Result"
-      @click="startGame()" class="mt-4 px-4 py-2  text-white rounded-md z-5 text-2xl" :class="isAnswerCorrect ? 'bg-green-500 hover:bg-green-600': 'bg-orange-400 hover:bg-orange-500'">
+      @click="startGame()" class="mt-4 px-4 py-2  text-white rounded-md z-10 text-2xl" :class="isAnswerCorrect ? 'bg-green-500 hover:bg-green-600': 'bg-orange-400 hover:bg-orange-500'">
       {{ isAnswerCorrect ? '🎉' : '▶' }}
     </button>
     <!-- 음성 녹음 버튼 및 스피너 -->
     <div v-if="currentStage !== Stage.Stage3_Result" class="mt-4 flex flex-col items-center">
-      <button @click="isListening ? stopRecording() : startRecording()" 
-              :class="isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'"
+      <button v-if="inavailableSpeechRecognition" class="px-4 py-2 text-2xl text-white rounded-md bg-gray-300 opacity-50">
+        <div class="relative flex items-center justify-center">
+          <div class="opacity-50">🎤</div>
+          <div class="absolute animate-ping duration-300 text-2xl z-1">
+            🚫
+          </div>
+        </div>
+      </button>
+      <button v-else @click="isListening ? stopRecording() : startRecording()" 
+              :class="isListening ? 'bg-red-500 hover:bg-red-600' : 'bg-green-200 hover:bg-green-300'"
               class="px-4 py-2 text-2xl text-white rounded-md">
-        {{ isListening ? '🛑' : '🎤' }}
+        <div class="relative flex items-center justify-center">
+          <div class="opacity-75">🎤</div>
+          <div v-if="isSomeoneSaying" class="absolute animate-ping duration-300 text-2xl">
+            🎤
+          </div>
+        </div>
       </button>
     </div>
 
     <!-- 상단 고정 헤더 -->
-    <header class="fixed top-0 left-0 w-full text-center py-2 bg-indigo-200 z-10">
+    <header class="fixed top-0 left-0 w-full text-center py-2 bg-indigo-200 z-11">
       <label for="theme-select" class="mr-2">단어장:</label>
       <select id="theme-select" v-model="selectedTheme" @change="loadWordPool">
         <option value="tinyping">티니핑</option>
@@ -426,7 +465,7 @@ console.log('gitSha', gitSha);
     </header>
     
     <!-- 하단 고정 푸터 -->
-    <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200 z-10">
+    <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200 z-11">
       <p>version: {{ gitSha }}</p>
     </footer>
   </div>
