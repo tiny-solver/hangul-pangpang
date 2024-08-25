@@ -50,6 +50,7 @@ if (speech.isSupported.value) {
   }
   speech.recognition.onresult = (event) => {
     console.log('onresult:', event.results);
+    speech.result.value = event.results[event.results.length - 1][0].transcript;
   }
   
 }
