@@ -50,7 +50,10 @@ if (speech.isSupported.value) {
   }
   speech.recognition.onresult = (event) => {
     console.log('onresult:', event.results);
-    speech.result.value = event.results[event.results.length - 1][0].transcript;
+    // speech.result.value = event.results[event.results.length - 1][0].transcript;
+    // ios일경우 녹음 껏다켜는걸로
+    speech.stop();
+    speech.start();
   }
   
 }
@@ -391,7 +394,7 @@ console.log('gitSha', gitSha);
         {{ isListening ? '🛑' : '🎤' }}
       </button>
     </div>
-    <header class="fixed top-0 left-0 w-full text-center py-2 bg-indigo-200">
+    <header class="fixed top-0 left-0 w-full text-center py-2 bg-indigo-200 z-10">
       <label for="theme-select" class="mr-2">단어장:</label>
       <select id="theme-select" v-model="selectedTheme" @change="loadWordPool">
         <option value="tinyping">티니핑</option>
@@ -400,7 +403,7 @@ console.log('gitSha', gitSha);
     </header>
     
     <!-- 하단 고정 푸터 -->
-    <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200">
+    <footer class="fixed bottom-0 left-0 w-full text-center py-2 bg-gray-200 z-10">
       <p>version: {{ gitSha }}</p>
     </footer>
   </div>
