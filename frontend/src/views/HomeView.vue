@@ -21,6 +21,12 @@ if (speech.isSupported.value) {
   console.log('speechRecognition is supported')
   console.log('speech.recognition: ', speech.recognition);
 
+  speech.recognition.onstart = () => {
+    console.log('recognition start');
+  }
+  speech.recognition.onend = () => {
+    console.log('recognition end');
+  }
   speech.recognition!.onsoundstart = () => {
     console.log('onsoundstart')
   }
@@ -45,6 +51,7 @@ if (speech.isSupported.value) {
   speech.recognition.onresult = (event) => {
     console.log('onresult:', event.results);
   }
+  
 }
 
 function setupGrammerList(words: string[]) {
