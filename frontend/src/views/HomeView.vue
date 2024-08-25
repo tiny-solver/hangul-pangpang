@@ -383,7 +383,7 @@ console.log('gitSha', gitSha);
     
     <!-- 다음 버튼 -->
     <button v-if="currentStage === Stage.Stage3_Result"
-      @click="startGame()" class="mt-4 px-4 py-2  text-white rounded-md z-10 text-2xl" :class="isAnswerCorrect ? 'bg-green-500 hover:bg-green-600': 'bg-orange-400 hover:bg-orange-500'">
+      @click="startGame()" class="mt-4 px-4 py-2  text-white rounded-md z-5 text-2xl" :class="isAnswerCorrect ? 'bg-green-500 hover:bg-green-600': 'bg-orange-400 hover:bg-orange-500'">
       {{ isAnswerCorrect ? '🎉' : '▶' }}
     </button>
     <!-- 음성 녹음 버튼 및 스피너 -->
@@ -394,6 +394,8 @@ console.log('gitSha', gitSha);
         {{ isListening ? '🛑' : '🎤' }}
       </button>
     </div>
+    
+    <!-- 상단 고정 헤더 -->
     <header class="fixed top-0 left-0 w-full text-center py-2 bg-indigo-200 z-10">
       <label for="theme-select" class="mr-2">단어장:</label>
       <select id="theme-select" v-model="selectedTheme" @change="loadWordPool">
