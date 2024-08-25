@@ -42,6 +42,9 @@ if (speech.isSupported.value) {
   speech.recognition.onerror = (event) => {
     console.error('recognition error:', event.error);
   }
+  speech.recognition.onresult = (event) => {
+    console.log('onresult:', event.results);
+  }
 }
 
 function setupGrammerList(words: string[]) {
