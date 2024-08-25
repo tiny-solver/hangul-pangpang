@@ -50,8 +50,8 @@ if (speech.isSupported.value) {
   }
   speech.recognition.onresult = (event) => {
     console.log('onresult:', event.results);
-    // speech.result.value = event.results[event.results.length - 1][0].transcript;
-    // ios일경우 녹음 껏다켜는걸로
+    speech.result.value = event.results[event.results.length - 1][0].transcript;
+    console.log("speech onoff");
     speech.stop();
     speech.start();
   }
@@ -394,7 +394,7 @@ console.log('gitSha', gitSha);
         {{ isListening ? '🛑' : '🎤' }}
       </button>
     </div>
-    
+
     <!-- 상단 고정 헤더 -->
     <header class="fixed top-0 left-0 w-full text-center py-2 bg-indigo-200 z-10">
       <label for="theme-select" class="mr-2">단어장:</label>
